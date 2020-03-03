@@ -1,0 +1,117 @@
+
+CREATE TABLE tbl_iolist (
+    io_seq	NUMBER	NOT NULL	PRIMARY KEY,
+    io_date	VARCHAR2(10)	NOT NULL,	
+    io_pname	nVARCHAR2(50)	NOT NULL,	
+    io_dname	nVARCHAR2(50)	NOT NULL,	
+    io_dceo	nVARCHAR2(20),		
+    io_inout	NUMBER(1)	NOT NULL,	
+    io_qty	NUMBER	NOT NULL,	
+    io_price	NUMBER,		
+    io_amt	NUMBER		
+);
+
+SELECT * FROM tbl_iolist;
+
+SELECT IO_DNAME,GROUPING(IO_DNAME),IO_INOUT,GROUPING(IO_INOUT),SUM(IO_AMT)
+FROM tbl_iolist
+GROUP BY ROLLUP(IO_DNAME), ROLLUP(IO_INOUT);
+
+-- IO_INOUT 으로 구루핑을 하여 소계 계산
+SELECT DECODE(IO_INOUT,NULL,'합계',IO_INOUT) ,
+    DECODE(GROUPING(IO_INOUT),'1','합계',IO_INOUT) TITLE,SUM(IO_AMT)
+FROM tbl_iolist
+GROUP BY ROLLUP(IO_INOUT);
+
+
+-- 상품별로 소계
+SELECT IO_PNAME,GROUPING(IO_PNAME),SUM(IO_AMT)
+FROM tbl_iolist
+GROUP BY ROLLUP(IO_PNAME);
+
+CREATE TABLE tbl_nh_iolist (
+    -- 12c AUTO INCREMENT
+    io_seq	NUMBER	GENERATED ALWAYS AS IDENTITY START WITH 1000 INCREMENT BY 1 PRIMARY KEY,
+    io_date	VARCHAR2(10)	NOT NULL,	
+    io_time	VARCHAR2(10)	NOT NULL,	
+    io_pname	nVARCHAR2(50)	NOT NULL,	
+    io_dname	nVARCHAR2(50)	NOT NULL,	
+    io_dceo	nVARCHAR2(50)	NOT NULL,	
+    io_inout	VARCHAR2(1)	NOT NULL,	
+    io_qty	NUMBER	NOT NULL,	
+    io_price	NUMBER	NOT NULL,	
+    io_amt	NUMBER		
+);
+
+DROP TABLE tbl_nh_iolist;
+CREATE TABLE tbl_nh_iolist (
+    -- 12c AUTO INCREMENT
+    io_seq	NUMBER PRIMARY KEY,
+    io_date	VARCHAR2(10)	NOT NULL,	
+    io_time	VARCHAR2(10)	NOT NULL,	
+    io_pname	nVARCHAR2(50)	NOT NULL,	
+    io_dname	nVARCHAR2(50)	NOT NULL,	
+    io_dceo	nVARCHAR2(50)	NOT NULL,	
+    io_inout	VARCHAR2(1)	NOT NULL,	
+    io_qty	NUMBER	NOT NULL,	
+    io_price	NUMBER	NOT NULL,	
+    io_amt	NUMBER		
+);
+
+SELECT COUNT(*) FROM tbl_nh_iolist
+GROUP BY io_inout ;
+
+
+SELECT io_dname,io_inout,COUNT(IO_DNAME)
+FROM tbl_nh_iolist
+GROUP BY io_dname,io_inout
+ORDER BY io_dname,io_inout;
+
+SELECT IO_DNAME,GROUPING(IO_DNAME),
+        DECODE(IO_INOUT,'1','매입','2','매출','소계') AS 구분,
+        GROUPING(IO_INOUT),
+        SUM(DECODE(io_inout,'1',IO_AMT,0)) AS 매입,
+        SUM(DECODE(io_inout,'2',IO_AMT,0)) AS 매출
+
+FROM tbl_nh_iolist
+GROUP BY ROLLUP(IO_DNAME), ROLLUP(IO_INOUT)
+ORDER BY io_dname,io_inout;
+
+
+/*
+거래처명으로 그룹을 설정후
+매입, 매출을 표시하고, 소계표시
+
+*/
+SELECT IO_DNAME,
+        DECODE(IO_INOUT,'1','매입','2','매출','소계') AS 구분,
+        SUM(DECODE(io_inout,'1',IO_AMT,0)) AS 매입,
+        SUM(DECODE(io_inout,'2',IO_AMT,0)) AS 매출
+
+FROM tbl_nh_iolist
+GROUP BY IO_DNAME, ROLLUP(IO_INOUT)
+ORDER BY io_dname,io_inout;
+
+-- 거래처, 상품별 매입매출 현황 보고서
+-- 거래처별 소계 계산
+
+SELECT IO_DNAME,
+        DECODE(IO_PNAME,NULL,'=================',IO_PNAME) AS 상품명,
+        DECODE(GROUPING(IO_PNAME),'1','거래처별 소계',' ') AS 적요,
+        SUM(DECODE(io_inout,'1',IO_AMT,0) * IO_QTY) AS 매입,
+        SUM(DECODE(io_inout,'2',IO_AMT,0) * IO_QTY) AS 매출
+FROM tbl_nh_iolist
+GROUP BY ROLLUP(IO_DNAME,IO_PNAME);
+ORDER BY io_dname,io_pname;
+
+SELECT IO_DNAME,
+        
+        DECODE(IO_PNAME,NULL,'=================',IO_PNAME) AS 상품명,
+        DECODE(GROUPING(IO_PNAME),'1','거래처별 소계',' ') AS 적요,
+        SUM(DECODE(io_inout,'1',IO_AMT,0) * IO_QTY) AS 매입,
+        SUM(DECODE(io_inout,'2',IO_AMT,0) * IO_QTY) AS 매출
+FROM tbl_nh_iolist
+GROUP BY CUBE(IO_DNAME,IO_PNAME)
+
+
+
