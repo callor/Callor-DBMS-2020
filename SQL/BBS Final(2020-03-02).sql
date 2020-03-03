@@ -65,5 +65,15 @@ AS (
 SELECT b_id, b_p_id,b_subject,depth_fullname FROM tree_query ORDER BY SORT;
 
 
+-- CONNECT BY PRIOR root > child 방향으로 설정
+SELECT b_id,b_p_id,b_date_time,b_subject,
+LTRIM (SYS_CONNECT_BY_PATH (b_subject, ' > '), ' > ') AS depth_fullname 
+FROM tbl_bbs 
+START WITH b_p_id = 0 
+CONNECT BY PRIOR b_id = b_p_id
+ORDER SIBLINGS BY b_ID DESC, b_date_time ASC; 
+/* 정렬 (일반적인 ORDER BY 가 아닌 계층내에서 정렬 할 수 있는 ORDER SIBLINGS BY) */
+
+
 
 
